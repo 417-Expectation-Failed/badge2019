@@ -216,6 +216,7 @@ static void snake5(void)  { snake(5); }
 static void snake6(void)  { snake(6); }
 static void snake8(void)  { snake(8); }
 static void snake10(void) { snake(10); }
+static void snake12(void) { snake(12); }
 
 void
 snakemenu(void)
@@ -226,6 +227,7 @@ snakemenu(void)
 		{ .label = "6", .cb = snake6,  },
 		{ .label = "8", .cb = snake8,  },
 		{ .label = "10",.cb = snake10, },
+		{ .label = "12",.cb = snake12, },
 	};
 
 	menu(snakemenu, ARRAY_SIZE(snakemenu), 0xCB0, 0x000);
