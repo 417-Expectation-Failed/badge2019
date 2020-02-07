@@ -26,13 +26,17 @@
 #include "buttons.h"
 #include "display.h"
 #include "menu.h"
+#include "power.h"
+#include "font.h"
 
 enum events {
 	EV_UP = 1,
 	EV_DOWN,
 	EV_LEFT,
 	EV_RIGHT,
+	EV_CENTER_PUSH,
 	EV_TICK,
+	EV_SMID_PUSH,
 };
 
 enum direction {
@@ -47,12 +51,15 @@ static const struct button_config game_of_life_buttons[BTN_MAX] = {
 	[BTN_DOWN]  = { .press = EV_DOWN, },
 	[BTN_LEFT]  = { .press = EV_LEFT, },
 	[BTN_RIGHT] = { .press = EV_RIGHT, },
+	[BTN_CENTER]   = { .press = EV_CENTER_PUSH, },
+	[BTN_SMID]   = { .press = EV_SMID_PUSH, },
 };
 
 void
-game_of_life(unsigned int res)
+game_of_life(unsigned int res, uint8_t seed)
 {
-    uint8_t frametime_ms = 200;
+	unsigned int count = 0;
+    uint8_t frametime_ms = 150;
     uint8_t spawn_probability_percent = 11;
     struct ticker tick;
     //const int birth_rules_length = 1;
@@ -71,7 +78,7 @@ game_of_life(unsigned int res)
 	/* '4' guaranteed to be random
 	 * -- chosen by fair dice
 	 */
-	srand(4);
+	srand(seed);
 
 	/* clear screen */
 	dp_fill(0, 0, display_width, display_height, 0x000);
@@ -95,8 +102,24 @@ game_of_life(unsigned int res)
 
     // main loop
 	while (1) {
+        switch ((enum events)event_get()) {
+            case EV_TICK:
+                if (power_pressed()) {
+                    count += 1;
+                    if (count == 3) {
+                        led1_off();
+                        led2_off();
+                        led3_off();
+                        ticker_stop(&tick);
+                        return;
+                    }
+                } else
+                    count = 0;
+                break;
+        }
         for(int y = 0; y < amount_tiles; y++) {
             for(int x = 0; x < amount_tiles; x++) {
+
                 int min_range_y = -1;
                 int max_range_y = 1;
                 int min_range_x = -1;
@@ -151,16 +174,53 @@ game_of_life(unsigned int res)
 	}
 }
 
-static void game_of_life4(void)  { game_of_life(4); }
-static void game_of_life5(void)  { game_of_life(5); }
-static void game_of_life6(void)  { game_of_life(6); }
-static void game_of_life8(void)  { game_of_life(8); }
-static void game_of_life10(void) { game_of_life(10); }
+static void game_of_life4(void)  { game_of_life_seed(4); }
+static void game_of_life5(void)  { game_of_life_seed(5); }
+static void game_of_life6(void)  { game_of_life_seed(6); }
+static void game_of_life8(void)  { game_of_life_seed(8); }
+static void game_of_life10(void) { game_of_life_seed(10); }
+
+void game_of_life_seed(uint8_t res) {
+    dp_clear(0x000);
+    dp_puts(5, font.height*2, 0xCB0, 0x000, "press buttons to");
+    dp_puts(5, font.height*3, 0xCB0, 0x000, "set seed");
+    dp_puts(5, font.height*4+5, 0xCB0, 0x000, "hold power to start");
+    struct ticker tick;
+    uint8_t power_count = 0;
+    uint8_t seed = 0;
+    char seed_str_buff[5];
+    ticker_start(&tick, 100, EV_TICK);
+    while(1) {
+        uint8_t latest_event = event_get();
+        if((enum events) latest_event != EV_TICK) {
+            seed += latest_event;
+        }
+        switch((enum events)latest_event) {
+            case EV_TICK:
+                if(power_pressed()) {
+                    power_count += 1;
+                    if(power_count == 3) {
+                        ticker_stop(&tick);
+                        dp_clear(0x000);
+                        game_of_life(res, seed);
+                        return;
+                    }
+                } else {
+                    led1_off();
+                }
+        }
+        sprintf(seed_str_buff, "%d", seed);
+        dp_puts(5, font.height * 6, 0xCB0, 0x000, "seed: ");
+        dp_puts(5 + font.width*6, font.height * 6, 0xCB0, 0x000, seed_str_buff);
+        timer_msleep(100);
+    }
+    dp_clear(0x000);
+}
 
 void
 game_of_lifemenu(void)
 {
-    //dp_puts(0, 0, 0xCB0, 0x000, 'choose resolution:');
+    //dp_puts(0, 0, 0xCB0, 0x000, 'resolution:');
 	static const struct menuitem game_of_lifemenu[] = {
 		{ .label = "4", .cb = game_of_life4,  },
 		{ .label = "5", .cb = game_of_life5,  },

@@ -346,6 +346,10 @@ dp_fill(unsigned int x, unsigned int y, unsigned int w, unsigned int h, unsigned
 		/* wait */;
 }
 
+void dp_clear(unsigned int color) {
+	dp_fill(0, 0, 239, 239, color);
+}
+
 void
 dp_fill666(unsigned int x, unsigned int y, unsigned int w, unsigned int h, unsigned int rgb)
 {
